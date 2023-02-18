@@ -1,0 +1,145 @@
+PROGRAMMING PORTION- ASSIGNMENT BACKGROUND: Make a Client/Server application with the 
+following specifications. Make sure that your application will follow the same API as 
+required. Your application should also be able to run with ANY other application having 
+the SAME specifications. Make your application to support the asked specifications 
+ONLY. 
+1. Also provide a README file if you made any assumptions. 
+2. Please make sure to enable your application to support the APPROPRIATE 
+BYTE ORDERING whenever necessary. 
+3. Also write a Makefile for your code. 
+4. (Clean and structured code: 2 + successful compilation: 5 + Makefile: 3 + 
+functionality: 30) 
+Hybird-Server: The hybrid server will be the combination of Telnet server and Network 
+time server. The Telnet server will be a restricted shell command executer for authorized 
+clients. The server will execute shell commands and will send the result back to the 
+connected client. The server will also display the results of the executed shell command 
+on it screen. The server should be able to execute the following commands: “ls”, “clear”, 
+“netstat”, “ps” , “df”. And the Network time server returns the system time on client 
+request. 
+(a) 
+1. Proper TLV (Type Length Value) format will be used for all messages 
+communicated between the client and server. 
+2. The server will first authenticate the connecting client by matching the password 
+sent by the user. 
+(b) MESSAGE FORMAT: 
+-------------------------------------------------------------------------- 
+| MESSAGE TYPE | | PAYLOAD LENGTH | | PAYLOAD | 
+-------------------------------------------------------------------------- 
+ The Message Type for Telnet applications will be 0x0010. 
+ The Payload length will be the length of the Payload Value. 
+ The Payload will be further sub-divided into two fields: 
+Payload Type: 
+_ 0x00 – WELCOME_MESSAGE 
+_ 0x11 – REQUEST_FOR_USERNAME 
+_ 0x12 – USERNAME 
+_ 0x13 – REQUEST_FOR_PASSWORD
+_ 0x14 – PASSWORD 
+_ 0x15 – LOGIN_SUCCESS 
+_ 0x16 – LOGIN_FAILURE 
+_ 0x17 – CMD_EXEC 
+_ 0x18 – CMD_EXEC_SUCCESS 
+_ 0x19 - CMD_RESULT 
+_ 0x20 - CMD_RESULT_END 
+Payload Value: The text depending on the payload type. 
+(c) Client and sever should not read, write data on sockets less than 5 bytes using 
+read,write send, recv, sendto, recvfrom system calls (hint: use socket options) 
+----------------------------TelnetServer------------------------------- 
+ Server will load the list of users from the text file 'UserFile.bin' into an array of 
+structure of following type: (create UserFile.bin by yourself with two columns user 
+name and password) 
+typedef struct _TelnetUserList 
+{ 
+char UserName[MAXLINE]; 
+char Password[MAXLINE]; 
+} TelnetUserList; 
+ The server will create two sockets , a stream socket and a Datagram socket 
+ TCP socket will listen on port no. 5900. 
+ UDP socket will receive requests on port 5900. 
+ Server will be doing I/O multiplexing using select() system call. 
+ Both TCP and UDP descriptor will be added to select and these will be monitor only 
+for readable. 
+ Whenever some TCP client connects to the server on tcp port , the select returns a 
+readable descriptor and the server sends a telnet message with the message type 
+“WELCOME_MESSAGE” to the client : 
+“Welcome Client < Client IPAddress>< Client Port No.>” 
+ Then, the parent server will fork() a child process for that TCP client. And then 
+parent server blocks back to select (). The server parent will listen for new client 
+connections. 
+-------------------------NetworkTimeServer---------------------------- 
+ When some UDP client send datagram on port 5900 , the select() will return and 
+server will check for readable descriptors and will send system time to the UDP client 
+and will return to select and will be blocked.(don’t use ) 
+Server Child: 
+ The client will not be able to get any command executed by the server until it has 
+been authorized as registered user. 
+ The child server will send a “REQUEST_FOR_USERNAME” message to the client, 
+asking for the client’s username. 
+ Now, when the child server receives a telnet message with “USERNAME” as 
+payload value, it will match the username with the list for usernames. 
+ If the username match is found, the child server then sends a 
+“REQUEST_FOR_PASSWORD” message to the client. 
+ The child process then waits for the password, and when it receives a message with 
+the telnet payload type “PASSWORD”, it performs a lookup for that 
+ Password against the username sent earlier in the list for registered users. 
+ If no match is found, the child server will send a “LOGIN_FAILURE” message to the 
+client and terminates. 
+ If a match is found, then the child server sends “LOGIN_SUCCESS” message to the 
+client. The server child will then display: 
+[User Name<IPAddressofClient>]: 
+And waits for the client to send the command to be executed by the server. 
+ When the child receives a command of payload type “CMD_EXEC” from the client, 
+it will display the command on the screen like this:
+[User Name <IPAddressofClient>]: cmd 
+ The child server will then fork another child process and the new child will execute 
+the command and the result will be written in the file “mytel.temp”. 
+(Hint1: Use the system() function to do this. Hint2: “>” can be used to redirect the 
+output of a command to a file, e.g., #ps > abc.txt). 
+ The server child process waits for its child process to finish its task. The second child 
+will then be terminated. 
+ The first child will send a “Successful Execution of Shell Command” message to the 
+client of the payload type “CMD_EXEC_SUCCESS”. 
+ The child server will then read the file “mytel.temp” and send all its data to the client 
+using the payload type “CMD_RESULT”. 
+ The child server will then send the message “Command Ended” to the client with the 
+payload type “CMD_RESULT_END”. 
+ It will then continue receiving and executing the client’s commands until the client 
+closes the connection. 
+NOTE: Appropriate signal handling must be performed for all the child processes, so 
+that no zombie processes are left after the clients terminate their connections with the 
+child server. 
+----------------------------Telnet Client----------------------------------- 
+ The client process will connect with the telnet server on port no. 3256. The IP address 
+of the server will be given as command-line argument. 
+ When the client receives a telnet message with the payload type 
+“WELCOME_MESSAGE” from server, it displays it on screen. 
+ When the client receives a telnet message with the payload type 
+“REQUEST_FOR_USERNAME” from the server, it displays the requested message 
+on screen. 
+ It then waits for the user to enter the user name to be sent, and then sends the 
+username with payload type set as “USER NAME” to the server. 
+ When the client receives a telnet message with the payload type 
+“REQUEST_FOR_PASSWORD” from the server, it displays the requested message 
+on screen. 
+ It then waits for the user to enter the password to be sent, and then sends the password 
+with message type set as “PASSWORD” to the server. 
+ The client process then waits for the server to authenticate it to send shell commands 
+to be executed by the server. 
+ When the client receives a message with the message type “LOGIN_FAILURE”, it 
+will terminate by calling exit( ). 
+ If “LOGIN_SUCCESS” message is received from the server, the client will then wait 
+for the user to enter the shell command to be executed. 
+ The client then sends the shell command entered by the user to the server enclosed in 
+payload type “CMD_EXEC”.
+ When the client receives the payload with type “CMD_EXEC_SUCCESS” from the 
+server, it displays “Successful Execution of Shell Command” on screen. 
+ After that, the client will receive the output of the command from the server with the 
+payload type “CMD_RESULT”. It will display it on its screen. 
+ When the client receives the payload with type “CMD_RESULT_END” from the 
+server, it displays “Command Ended” on screen. 
+ The client will then wait for user to get more commands executed by the server. 
+ The client will terminate by entering the end-of-file character 
+---------------------UDP Client---------------------------- 
+ The client process will send request for system time to server on UDP port 5900 
+using connected UDP socket 
+ The address of the server will be given as command-line argument. 
+ Server will respond with sytem time client displays the time and exits.

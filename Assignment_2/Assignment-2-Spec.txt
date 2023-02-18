@@ -1,0 +1,68 @@
+PROGRAMMING PORTION: Make a Client/Server application with the following specifications. Make sure that 
+your application will follow the same API as required. Your application should also be 
+able to run with ANY other application having the SAME specifications. Make your 
+application to support the asked specifications ONLY. 
+ Please make sure to enable your application to support the APPROPRIOATE BYTE 
+ORDERING whenever necessary. 
+ Provide a README file If you make any assumptions 
+ Also provide make files for client and server. 
+(Marks distribution: Successful compilation: 5; Functionality: 25; Make files: 5) 
+RESTRICTED SHELL APPLICATION: The server should act as a shell program that can be 
+considered as restricted shell. The client will send the server shell commands to be 
+executed and the results displayed on the server’s console. The server should be able to 
+execute the following commands: “ls”, “ps”, and “df”, “clear”, “netstat” 
+ There will be following enlisted features in this assignment: 
+(a) Proper TLV (Type Length Value) format will be used for all messages 
+ Communicated between the client and server. 
+(b) MESSAGE FORMAT: 
+ -------------------------------------------------------------------------- 
+ | MESSAGE TYPE | | PAYLOAD LENGTH | | PAYLOAD | 
+ -------------------------------------------------------------------------- 
+ The Message Type for this application will be 0x0010. 
+ The Payload length will be the length of the Payload Value. 
+ The Payload will be further sub-divided into two fields: 
+1. Payload Type: 
+0x00 – WELCOME_MESSAGE 
+0x11 – SHELL_COMMAND 
+0x12 – CMDEXEC_SUCCESSFUL 
+0x13 – TERM_SER_PROC 
+2. Payload Value: The text depending on the payload type. 
+----------------------------SERVER SPECIFICATION------------------------- 
+ The server will listen on port # 4700 
+ Whenever a client connects to the server the server sends the Welcome message to 
+the client: “Welcome Client <IPAddress><Port No.>”, Payload Type is 
+ WELCOME_MESSAGE . 
+ Then, the server will fork a child process for that client. 
+ The server parent will listen for new client connections. 
+ The server child waits for the client to send the command to be executed by the 
+Server. 
+ When the child receives a command from the client, the payload type of message 
+ will be SHELL_COMMAND, server will display the command on the screen 
+ like this: [cmd <IPAddressofClient>]: cmd 
+ The child will then fork another child process and the new child will execute the 
+Command and the result will be displayed on screen. 
+(Hint: Use the exec ( ) function to do this). 
+ The second child will be terminated. 
+ The first child will send a “Successful Execution of Shell Command” message to the 
+client the payload type of the message will be CMDEXEC_SUCCESSFUL. 
+ It will then continue receiving and executing the client’s commands until the 
+ Client closes the connection and sends end-of-file character the payload type of the 
+client termination segment will be TERM_SER_PROC. The first level child process 
+will be terminated 
+POSIX SIGNAL HANDLING: 
+ Properly handle the Signals using Sigaction() function , Block the enlisted signals 
+SIGINT, SIGQUIT, SIGILL, SIGABRT, SIGFPE, SIGSEGV 
+ Catch and Handle SIGCHLD signal, Also handle the Errors whenever some slow 
+system calls (API) is interrupted because of signal.
+----------------------CLIENT SPECS-------------------------
+ The client will connect with the server on port # 4700 
+ The client will receive the Welcome message from server, the payload type of the 
+message will be WELCOME_MESSAGE and client will display it on screen. 
+ The client will then wait for the user to enter the shell command to be executed. 
+ The client then sends the shell command entered by the user to the server with 
+payload type SHELL_COMMAND. 
+ When the client receives the “Successful Execution of Shell Command” from 
+Server with payload type CMDEXEC_SUCCESSFUL it displays it on screen. 
+ The client will then wait for user to get more commands executed by the server. 
+ The client will terminate by entering the end-of-file character and sends it to server 
+and sets the payload type of the message TERM_SER_PROC.
